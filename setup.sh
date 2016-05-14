@@ -60,6 +60,7 @@ test -d /var/log/openaps || sudo mkdir /var/log/openaps && sudo chown $USER /var
 openaps vendor add openapscontrib.timezones
 #openaps vendor add openxshareble
 openaps vendor add mmeowlink.vendors.mmeowlink
+openaps vendor add openapscontrib.glucosetools
 
 # don't re-create devices if they already exist
 openaps device show 2>/dev/null > /tmp/openaps-devices
@@ -69,8 +70,9 @@ grep -q pump.ini .gitignore 2>/dev/null || echo pump.ini >> .gitignore
 git add .gitignore
 #grep pump /tmp/openaps-devices || openaps device add pump medtronic $serial || die "Can't add pump"
 grep pump /tmp/openaps-devices || openaps device add pump mmeowlink subg_rfspy $ttyport $serial || die "Can't add pump"
-#grep cgm /tmp/openaps-devices || openaps device add cgm dexcom || die "Can't add CGM"
-#git add cgm.ini
+# Loudnate's glucosetools to reformat Medtronic glucose data to a compatible format
+grep glucose /tmp/openaps-devices || openaps device add glucose glucosetools || die "Can't add glucosetools"
+git add glucose.ini
 #grep share /tmp/openaps-devices || openaps device add share openxshareble || die "Can't add Share"
 #openaps use share configure --serial $share_serial
 #git add share.ini
@@ -100,7 +102,7 @@ openaps report show 2>/dev/null > /tmp/openaps-reports
 
 # add reports for frequently-refreshed monitoring data
 ls monitor 2>/dev/null >/dev/null || mkdir monitor || die "Can't mkdir monitor"
-grep monitor/cgm-glucose.json /tmp/openaps-reports || openaps report add monitor/cgm-glucose.json JSON cgm iter_glucose_hours 25 || die "Can't add cgm-glucose.json"
+grep monitor/cgm-glucose.json /tmp/openaps-reports || openaps report add monitor/cgm-glucose.json JSON pump iter_glucose_hours 25 || die "Can't add cgm-glucose.json"
 #grep monitor/cgm-glucose.json /tmp/openaps-reports || openaps report add monitor/cgm-glucose.json JSON share iter_glucose 288 || die "Can't add cgm-glucose.json"
 #grep monitor/share-glucose.json /tmp/openaps-reports || openaps report add monitor/share-glucose.json JSON share iter_glucose 5 || die "Can't add share-glucose.json"
 grep monitor/ns-glucose.json /tmp/openaps-reports || openaps report add monitor/ns-glucose.json text ns-glucose shell || die "Can't add ns-glucose.json"
