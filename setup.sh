@@ -73,9 +73,7 @@ grep pump /tmp/openaps-devices || openaps device add pump mmeowlink subg_rfspy $
 # Loudnate's glucosetools to reformat Medtronic glucose data to a compatible format
 grep glucose /tmp/openaps-devices || openaps device add glucose glucosetools || die "Can't add glucosetools"
 git add glucose.ini
-#grep share /tmp/openaps-devices || openaps device add share openxshareble || die "Can't add Share"
-#openaps use share configure --serial $share_serial
-#git add share.ini
+
 #openaps device remove ns-glucose
 grep ns-glucose /tmp/openaps-devices || openaps device add ns-glucose process 'bash -c "curl -m 30 -s $NIGHTSCOUT_HOST/api/v1/entries/sgv.json?count=288 | json -e \"this.glucose = this.sgv\""' || die "Can't add ns-glucose"
 git add ns-glucose.ini
@@ -102,7 +100,8 @@ openaps report show 2>/dev/null > /tmp/openaps-reports
 
 # add reports for frequently-refreshed monitoring data
 ls monitor 2>/dev/null >/dev/null || mkdir monitor || die "Can't mkdir monitor"
-grep monitor/cgm-glucose.json /tmp/openaps-reports || openaps report add monitor/cgm-glucose.json JSON pump iter_glucose_hours 25 || die "Can't add cgm-glucose.json"
+grep monitor/glucose-raw.json /tmp/openaps-reports || openaps report add monitor/glucose-raw.json JSON pump iter_glucose_hours 25 || die "Can't add glucose-raw.json"
+grep monitor/cgm-glucose.json /tmp/openaps-reports || oopenaps report add monitor/cgm-glucose.json JSON glucose clean monitor/glucose-raw.json || die "Can't add cgm-glucose.json"
 #grep monitor/cgm-glucose.json /tmp/openaps-reports || openaps report add monitor/cgm-glucose.json JSON share iter_glucose 288 || die "Can't add cgm-glucose.json"
 #grep monitor/share-glucose.json /tmp/openaps-reports || openaps report add monitor/share-glucose.json JSON share iter_glucose 5 || die "Can't add share-glucose.json"
 grep monitor/ns-glucose.json /tmp/openaps-reports || openaps report add monitor/ns-glucose.json text ns-glucose shell || die "Can't add ns-glucose.json"
@@ -153,7 +152,8 @@ openaps alias add mmtune '! bash -c "echo -n \"mmtune: \" && openaps report invo
 openaps alias add wait-for-silence '! bash -c "echo -n \"Listening: \"; for i in `seq 1 100`; do echo -n .; ~/src/mmeowlink/bin/mmeowlink-any-pump-comms.py --port '$ttyport' --wait-for 20 2>/dev/null | egrep -v subg | egrep No && break; done"'
 openaps alias add preflight '! bash -c "openaps wait-for-silence && openaps mmtune && echo -n \"PREFLIGHT \" && openaps report invoke monitor/temp_basal.json 2>/dev/null >/dev/null && echo OK || ( echo FAIL; sleep 30; exit 1 )"' || die "Can't add preflight"
 #openaps alias add preflight '! bash -c "echo -n \"mmtune: \" && openaps mmtune && echo -n \"PREFLIGHT \" && openaps report invoke monitor/temp_basal.json 2>/dev/null >/dev/null && echo OK || ( echo FAIL; sleep 120; exit 1 )"' || die "Can't add preflight"
-openaps alias add monitor-cgm "report invoke monitor/cgm-glucose.json" || die "Can't add monitor-cgm"
+openaps alias add monitor-cgm  '! bash -c " (openaps report invoke monitor/glucose-raw.json && openaps clean)"' || die "Can't add monitor-cgm"
+openaps alias add Clean “report invoke monitor/cgm-glucose.json” || die "Can't add Clean"
 #openaps alias add monitor-share "report invoke monitor/share-glucose.json" || die "Can't add monitor-share"
 openaps alias add get-ns-glucose "report invoke monitor/ns-glucose.json" || die "Can't add get-ns-glucose"
 openaps alias add monitor-pump "report invoke monitor/clock.json monitor/temp_basal.json monitor/pumphistory.json monitor/pumphistory-zoned.json monitor/clock-zoned.json monitor/iob.json monitor/meal.json monitor/reservoir.json monitor/battery.json monitor/status.json" || die "Can't add monitor-pump"
