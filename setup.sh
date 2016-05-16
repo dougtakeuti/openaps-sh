@@ -152,7 +152,7 @@ openaps alias add mmtune '! bash -c "echo -n \"mmtune: \" && openaps report invo
 openaps alias add wait-for-silence '! bash -c "echo -n \"Listening: \"; for i in `seq 1 100`; do echo -n .; ~/src/mmeowlink/bin/mmeowlink-any-pump-comms.py --port '$ttyport' --wait-for 20 2>/dev/null | egrep -v subg | egrep No && break; done"'
 openaps alias add preflight '! bash -c "openaps wait-for-silence && openaps mmtune && echo -n \"PREFLIGHT \" && openaps report invoke monitor/temp_basal.json 2>/dev/null >/dev/null && echo OK || ( echo FAIL; sleep 30; exit 1 )"' || die "Can't add preflight"
 #openaps alias add preflight '! bash -c "echo -n \"mmtune: \" && openaps mmtune && echo -n \"PREFLIGHT \" && openaps report invoke monitor/temp_basal.json 2>/dev/null >/dev/null && echo OK || ( echo FAIL; sleep 120; exit 1 )"' || die "Can't add preflight"
-openaps alias add monitor-cgm  '! bash -c " (openaps report invoke monitor/glucose-raw.json && openaps clean)"' || die "Can't add monitor-cgm"
+openaps alias add monitor-cgm  '! bash -c " (openaps report invoke monitor/glucose-raw.json && openaps Clean)"' || die "Can't add monitor-cgm"
 openaps alias add Clean “report invoke monitor/cgm-glucose.json” || die "Can't add Clean"
 #openaps alias add monitor-share "report invoke monitor/share-glucose.json" || die "Can't add monitor-share"
 openaps alias add get-ns-glucose "report invoke monitor/ns-glucose.json" || die "Can't add get-ns-glucose"
