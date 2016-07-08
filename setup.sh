@@ -56,7 +56,7 @@ test -d /var/log/openaps || sudo mkdir /var/log/openaps && sudo chown $USER /var
 #add vendors
 openaps vendor add openapscontrib.timezones
 openaps vendor add mmeowlink.vendors.mmeowlink
-openaps vendor add openapscontrib.glucosetools
+#openaps vendor add openapscontrib.glucosetools
 
 # don't re-create devices if they already exist
 openaps device show 2>/dev/null > /tmp/openaps-devices
@@ -65,10 +65,9 @@ openaps device show 2>/dev/null > /tmp/openaps-devices
 grep -q pump.ini .gitignore 2>/dev/null || echo pump.ini >> .gitignore
 git add .gitignore
 grep pump /tmp/openaps-devices || openaps device add pump mmeowlink subg_rfspy $ttyport $serial || die "Can't add pump"
-# Loudnate's glucosetools to reformat Medtronic glucose data to a compatible format
-grep glucose /tmp/openaps-devices || openaps device add glucose glucosetools || die "Can't add glucosetools"
-git add glucose.ini
-
+# Loudnate's glucosetools to reformat Medtronic glucose data to a compatible format - Instead, I'll try to use mm-format-ns-glucose <input> <output>
+#grep glucose /tmp/openaps-devices || openaps device add glucose glucosetools || die "Can't add glucosetools"
+#git add glucose.ini
 grep oref0 /tmp/openaps-devices || openaps device add oref0 process oref0 || die "Can't add oref0"
 git add oref0.ini
 grep iob /tmp/openaps-devices || openaps device add iob process --require "pumphistory profile clock" oref0 calculate-iob || die "Can't add iob"
@@ -138,7 +137,8 @@ openaps alias add invoke "report invoke" || die "Can't add invoke"
 openaps alias add mmtune '! bash -c "echo -n \"mmtune: \" && openaps report invoke monitor/mmtune.json 2>/dev/null >/dev/null; grep -v setFreq monitor/mmtune.json | grep -A2 `json -a setFreq -f monitor/mmtune.json` | while read line; do echo -n \"$line \"; done"'
 #openaps alias add wait-for-silence '! bash -c "echo -n \"Listening: \"; for i in `seq 1 100`; do echo -n .; ~/src/mmeowlink/bin/mmeowlink-any-pump-comms.py --port '$ttyport' --wait-for 20 2>/dev/null | egrep -v subg | egrep No && break; done"'
 #openaps alias add preflight '! bash -c "openaps wait-for-silence && openaps mmtune && echo -n \"PREFLIGHT \" && openaps report invoke monitor/temp_basal.json 2>/dev/null >/dev/null && echo OK || ( echo FAIL; sleep 30; exit 1 )"' || die "Can't add preflight"
-openaps alias add monitor-cgm  '! bash -c " (openaps report invoke monitor/glucose-raw.json && openaps Clean)"' || die "Can't add monitor-cgm"
+openaps alias add preflight '! bash -c "openaps mmtune && echo -n \"PREFLIGHT \" && openaps report invoke monitor/temp_basal.json 2>/dev/null >/dev/null && echo OK || ( echo FAIL; sleep 30; exit 1 )"' || die "Can't add preflight"
+openaps alias add monitor-cgm  '! bash -c " (openaps report invoke monitor/glucose-raw.json && mm-format-ns-glucose monitor/glucose-raw.json monitor/clean_glucose.json)"' || die "Can't add monitor-cgm"
 #openaps alias add Clean “report invoke monitor/cgm-glucose.json” || die "Can't add Clean"
 #openaps alias add get-ns-glucose "report invoke monitor/ns-glucose.json" || die "Can't add get-ns-glucose"
 openaps alias add monitor-pump "report invoke monitor/clock.json monitor/temp_basal.json monitor/pumphistory.json monitor/pumphistory-zoned.json monitor/clock-zoned.json monitor/iob.json monitor/meal.json monitor/reservoir.json monitor/battery.json monitor/status.json" || die "Can't add monitor-pump"
