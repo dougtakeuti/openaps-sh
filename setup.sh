@@ -18,7 +18,7 @@ die() {
   echo "$@"
   exit 1
 }
-
+#Initial setup: directories, git init, max iob
 if [[ $# -lt 2 ]]; then
     openaps device show pump 2>/dev/null >/dev/null || die "Usage: setup.sh <directory> <pump serial #> [max_iob] [/dev/ttySOMETHING]"
 fi
@@ -53,6 +53,7 @@ sudo cp ~/src/oref0/logrotate.rsyslog /etc/logrotate.d/rsyslog
 
 test -d /var/log/openaps || sudo mkdir /var/log/openaps && sudo chown $USER /var/log/openaps
 
+#add vendors
 openaps vendor add openapscontrib.timezones
 openaps vendor add mmeowlink.vendors.mmeowlink
 openaps vendor add openapscontrib.glucosetools
@@ -92,7 +93,7 @@ openaps report show 2>/dev/null > /tmp/openaps-reports
 # add reports for frequently-refreshed monitoring data
 ls monitor 2>/dev/null >/dev/null || mkdir monitor || die "Can't mkdir monitor"
 grep monitor/glucose-raw.json /tmp/openaps-reports || openaps report add monitor/glucose-raw.json JSON pump iter_glucose_hours 27 || die "Can't add glucose-raw.json"
-grep monitor/cgm-glucose.json /tmp/openaps-reports || oopenaps report add monitor/cgm-glucose.json JSON glucose clean monitor/glucose-raw.json || die "Can't add cgm-glucose.json"
+#grep monitor/cgm-glucose.json /tmp/openaps-reports || openaps report add monitor/cgm-glucose.json JSON glucose clean monitor/glucose-raw.json || die "Can't add cgm-glucose.json"
 grep monitor/mmtune.json /tmp/openaps-reports || openaps report add monitor/mmtune.json JSON pump mmtune || die "Can't add mmtune"
 grep settings/model.json /tmp/openaps-reports || openaps report add settings/model.json JSON pump model || die "Can't add model"
 grep monitor/clock.json /tmp/openaps-reports || openaps report add monitor/clock.json JSON pump read_clock || die "Can't add clock.json"
@@ -135,14 +136,14 @@ openaps alias show 2>/dev/null > /tmp/openaps-aliases
 # add aliases to get data
 openaps alias add invoke "report invoke" || die "Can't add invoke"
 openaps alias add mmtune '! bash -c "echo -n \"mmtune: \" && openaps report invoke monitor/mmtune.json 2>/dev/null >/dev/null; grep -v setFreq monitor/mmtune.json | grep -A2 `json -a setFreq -f monitor/mmtune.json` | while read line; do echo -n \"$line \"; done"'
-openaps alias add wait-for-silence '! bash -c "echo -n \"Listening: \"; for i in `seq 1 100`; do echo -n .; ~/src/mmeowlink/bin/mmeowlink-any-pump-comms.py --port '$ttyport' --wait-for 20 2>/dev/null | egrep -v subg | egrep No && break; done"'
-openaps alias add preflight '! bash -c "openaps wait-for-silence && openaps mmtune && echo -n \"PREFLIGHT \" && openaps report invoke monitor/temp_basal.json 2>/dev/null >/dev/null && echo OK || ( echo FAIL; sleep 30; exit 1 )"' || die "Can't add preflight"
+#openaps alias add wait-for-silence '! bash -c "echo -n \"Listening: \"; for i in `seq 1 100`; do echo -n .; ~/src/mmeowlink/bin/mmeowlink-any-pump-comms.py --port '$ttyport' --wait-for 20 2>/dev/null | egrep -v subg | egrep No && break; done"'
+#openaps alias add preflight '! bash -c "openaps wait-for-silence && openaps mmtune && echo -n \"PREFLIGHT \" && openaps report invoke monitor/temp_basal.json 2>/dev/null >/dev/null && echo OK || ( echo FAIL; sleep 30; exit 1 )"' || die "Can't add preflight"
 openaps alias add monitor-cgm  '! bash -c " (openaps report invoke monitor/glucose-raw.json && openaps Clean)"' || die "Can't add monitor-cgm"
-openaps alias add Clean “report invoke monitor/cgm-glucose.json” || die "Can't add Clean"
-openaps alias add get-ns-glucose "report invoke monitor/ns-glucose.json" || die "Can't add get-ns-glucose"
+#openaps alias add Clean “report invoke monitor/cgm-glucose.json” || die "Can't add Clean"
+#openaps alias add get-ns-glucose "report invoke monitor/ns-glucose.json" || die "Can't add get-ns-glucose"
 openaps alias add monitor-pump "report invoke monitor/clock.json monitor/temp_basal.json monitor/pumphistory.json monitor/pumphistory-zoned.json monitor/clock-zoned.json monitor/iob.json monitor/meal.json monitor/reservoir.json monitor/battery.json monitor/status.json" || die "Can't add monitor-pump"
 openaps alias add get-settings "report invoke settings/model.json settings/bg_targets.json settings/insulin_sensitivities.json settings/basal_profile.json settings/settings.json settings/carb_ratios.json settings/profile.json settings/pumphistory-24h.json settings/pumphistory-24h-zoned.json" || die "Can't add get-settings"
-openaps alias add get-bg '! bash -c "openaps ns-temptargets; ( openaps get-ns-glucose && cat monitor/ns-glucose.json | json -c \"minAgo=(new Date()-new Date(this.dateString))/60/1000; return minAgo < 10 && minAgo > -5 && this.glucose > 30\" | grep -q glucose && mv monitor/ns-glucose.json monitor/glucose.json ) || ( openaps monitor-cgm 2>/dev/null | tail -1 && grep -q glucose monitor/cgm-glucose.json && rsync -rtu monitor/cgm-glucose.json monitor/glucose.json )"' || die "Can't add get-bg"
+#openaps alias add get-bg '! bash -c "openaps ns-temptargets; ( openaps get-ns-glucose && cat monitor/ns-glucose.json | json -c \"minAgo=(new Date()-new Date(this.dateString))/60/1000; return minAgo < 10 && minAgo > -5 && this.glucose > 30\" | grep -q glucose && mv monitor/ns-glucose.json monitor/glucose.json ) || ( openaps monitor-cgm 2>/dev/null | tail -1 && grep -q glucose monitor/cgm-glucose.json && rsync -rtu monitor/cgm-glucose.json monitor/glucose.json )"' || die "Can't add get-bg"
 openaps alias add gather '! bash -c "rm monitor/*; ( openaps get-bg | egrep \"reporting|Copied\" && echo -n R && openaps report invoke monitor/status.json 2>/dev/null >/dev/null && echo -n e && test $(cat monitor/status.json | json bolusing) == false && echo -n fr && openaps ns-meal-carbs && echo -n e && openaps ns-temptargets && echo -n sh && ( (openaps monitor-pump || openaps monitor-pump) >/dev/null && echo ed ) || (echo; sleep 30; exit 1)) 2>/dev/null"' || die "Can't add gather"
 openaps alias add wait-for-bg '! bash -c "cp monitor/glucose.json monitor/last-glucose.json; while(diff -q monitor/last-glucose.json monitor/glucose.json); do echo -n .; sleep 10; openaps get-bg >/dev/null; done"'
 
